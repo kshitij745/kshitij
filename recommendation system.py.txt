@@ -1,0 +1,46 @@
+import numpy as np
+import pandas as pd
+from sklearn.metrics.pairwise import cosine_similarity
+
+
+ratings_data = {
+    'user_id': [1, 1, 1, 2, 2, 3, 3, 3, 4, 4],
+    'movie_id': [101, 102, 103, 101, 104, 102, 103, 104, 101, 103],
+    'rating': [5, 3, 4, 4, 2, 2, 5, 5, 3, 4]
+}
+
+
+ratings_df = pd.DataFrame(ratings_data)
+
+user_movie_matrix = ratings_df.pivot(index='user_id', columns='movie_id', values='rating').fillna(0)
+
+user_similarity = cosine_similarity(user_movie_matrix)
+
+
+user_similarity_df = pd.DataFrame(user_similarity, index=user_movie_matrix.index, columns=user_movie_matrix.index)
+
+
+def get_movie_recommendations(user_id, user_movie_matrix, user_similarity_df, top_n=3):
+   
+    user_ratings = user_movie_matrix.loc[user_id]
+    
+   
+    similar_users = user_similarity_df[user_id].sort_values(ascending=False)
+    
+  
+    weighted_ratings = np.dot(similar_users, user_movie_matrix)
+    
+  
+    weighted_ratings_df = pd.DataFrame(weighted_ratings, index=user_movie_matrix.columns, columns=['weighted_rating'])
+    
+   
+    weighted_ratings_df = weighted_ratings_df[~weighted_ratings_df.index.isin(user_ratings[user_ratings > 0].index)]
+    
+    
+    recommendations = weighted_ratings_df.sort_values(by='weighted_rating', ascending=False).head(top_n)
+    
+    return recommendations
+
+
+recommendations = get_movie_recommendations(1, user_movie_matrix, user_similarity_df)
+print(recommendations)
